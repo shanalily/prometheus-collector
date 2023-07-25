@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: ama-metrics-node
-  namespace: kube-system
   labels:
     component: ama-metrics
 spec:
@@ -181,7 +180,7 @@ spec:
           command:
             - /addon-token-adapter
           args:
-            - --secret-namespace=kube-system
+            - --secret-namespace=default
             - --secret-name=aad-msi-auth-token
             - --token-server-listening-port=7777
             - --health-server-listening-port=9999
@@ -276,7 +275,6 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: ama-metrics-win-node
-  namespace: kube-system
   labels:
     component: ama-metrics
 spec:
@@ -403,7 +401,7 @@ spec:
           command:
            - addon-token-adapter-win
           args:
-           - --secret-namespace=kube-system
+           - --secret-namespace=647764e0ba8726000164636b
            - --secret-name=aad-msi-auth-token
            - --token-server-listening-port=7777
            - --health-server-listening-port=9999

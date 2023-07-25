@@ -1,0 +1,978 @@
+NAME: ama-metrics
+LAST DEPLOYED: Fri May 26 14:25:33 2023
+NAMESPACE: 6463a3a122111c0001eb109f
+STATUS: pending-install
+REVISION: 1
+TEST SUITE: None
+HOOKS:
+MANIFEST:
+---
+# Source: ama-metrics/templates/ama-metrics-ksm-serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/component: ama-metrics
+    app.kubernetes.io/name: ama-metrics-ksm
+    app.kubernetes.io/part-of: ama-metrics-ksm
+    app.kubernetes.io/version: 2.8.1
+    helm.sh/chart: azure-monitor-metrics-addon-0.1.0
+  name: ama-metrics-ksm
+---
+# Source: ama-metrics/templates/ama-metrics-serviceAccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ama-metrics-serviceaccount
+---
+# Source: ama-metrics/templates/ama-metrics-clusterRole.yaml
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ama-metrics-reader
+rules:
+  - apiGroups: [""]
+    resources:
+      [
+        "pods",
+        "nodes",
+        "nodes/stats",
+        "nodes/metrics",
+        "nodes/proxy",
+        "namespaces",
+        "services",
+        "endpoints",
+        "ingress"
+      ]
+    verbs: ["list", "get", "watch"]
+  - apiGroups:
+    - networking.k8s.io
+    resources:
+    - ingresses
+    verbs: ["list", "get", "watch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["aad-msi-auth-token"]
+    verbs: ["get", "watch"]
+  - nonResourceURLs: ["/metrics"]
+    verbs: ["get"]
+  - apiGroups: ["clusterconfig.azure.com"]
+    resources: ["azureclusteridentityrequests", "azureclusteridentityrequests/status"]
+    verbs: ["get", "update", "list", "create"]
+---
+# Source: ama-metrics/templates/ama-metrics-ksm-role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/component: ama-metrics
+    app.kubernetes.io/name: ama-metrics-ksm
+    app.kubernetes.io/part-of: ama-metrics-ksm
+    app.kubernetes.io/version: 2.8.1
+    helm.sh/chart: azure-monitor-metrics-addon-0.1.0
+  name: ama-metrics-ksm
+rules:
+- apiGroups: ["certificates.k8s.io"]
+  resources:
+  - certificatesigningrequests
+  verbs: ["list", "watch"]
+- apiGroups: [""]
+  resources:
+  - configmaps
+  verbs: ["list", "watch"]
+- apiGroups: ["batch"]
+  resources:
+  - cronjobs
+  verbs: ["list", "watch"]
+- apiGroups: ["extensions", "apps"]
+  resources:
+  - daemonsets
+  verbs: ["list", "watch"]
+- apiGroups: ["extensions", "apps"]
+  resources:
+  - deployments
+  verbs: ["list", "watch"]
+- apiGroups: [""]
+  resources:
+  - endpoints
+  verbs: ["list", "watch"]
+- apiGroups: ["autoscaling"]
+  resources:
+  - horizontalpodautoscalers
+  verbs: ["list", "watch"]
+- apiGroups: ["extensions", "networking.k8s.io"]
+  resources:
+  - ingresses
+  verbs: ["list", "watch"]
+- apiGroups: ["batch"]
+  resources:
+  - jobs
+  verbs: ["list", "watch"]
+- apiGroups: ["coordination.k8s.io"]
+  resources:
+  - leases
+  verbs: ["list", "watch"]
+- apiGroups: [""]
+  resources:
+  - limitranges
+  verbs: ["list", "watch"]
+- apiGroups: ["admissionregistration.k8s.io"]
+  resources:
+    - mutatingwebhookconfigurations
+  verbs: ["list", "watch"]
+- apiGroups: [""]
+  resources:
+  - namespaces
+  verbs: ["list", "watch"]
+- apiGroups: ["networking.k8s.io"]
+  resources:
+  - networkpolicies
+  verbs: ["list", "watch"]
+- apiGroups: [""]
+  resources:
+  - nodes
+  verbs: ["list", "watch"]
+- apiGroups: [""]
+  resources:
+  - persistentvolumeclaims
+  verbs: ["list", "watch"]
+- apiGroups: [""]
+  resources:
+  - persistentvolumes
+  verbs: ["list", "watch"]
+- apiGroups: ["policy"]
+  resources:
+    - poddisruptionbudgets
+  verbs: ["list", "watch"]
+- apiGroups: [""]
+  resources:
+  - pods
+  verbs: ["list", "watch"]
+- apiGroups: ["extensions", "apps"]
+  resources:
+  - replicasets
+  verbs: ["list", "watch"]
+- apiGroups: [""]
+  resources:
+  - replicationcontrollers
+  verbs: ["list", "watch"]
+- apiGroups: [""]
+  resources:
+  - resourcequotas
+  verbs: ["list", "watch"]
+- apiGroups: [""]
+  resources:
+  - secrets
+  verbs: ["list", "watch"]
+- apiGroups: [""]
+  resources:
+  - services
+  verbs: ["list", "watch"]
+- apiGroups: ["apps"]
+  resources:
+  - statefulsets
+  verbs: ["list", "watch"]
+- apiGroups: ["storage.k8s.io"]
+  resources:
+    - storageclasses
+  verbs: ["list", "watch"]
+- apiGroups: ["admissionregistration.k8s.io"]
+  resources:
+    - validatingwebhookconfigurations
+  verbs: ["list", "watch"]
+- apiGroups: ["storage.k8s.io"]
+  resources:
+    - volumeattachments
+  verbs: ["list", "watch"]
+---
+# Source: ama-metrics/templates/ama-metrics-clusterRoleBinding.yaml
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ama-metrics-clusterrolebinding
+subjects:
+  - kind: ServiceAccount
+    name: ama-metrics-serviceaccount
+    namespace: 6463a3a122111c0001eb109f
+roleRef:
+  kind: ClusterRole
+  name: ama-metrics-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: ama-metrics/templates/ama-metrics-ksm-clusterrolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/component: ama-metrics
+    app.kubernetes.io/name: ama-metrics-ksm
+    app.kubernetes.io/part-of: ama-metrics-ksm
+    app.kubernetes.io/version: 2.8.1
+    helm.sh/chart: azure-monitor-metrics-addon-0.1.0
+  name: ama-metrics-ksm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ama-metrics-ksm
+subjects:
+- kind: ServiceAccount
+  name: ama-metrics-ksm
+  namespace: 6463a3a122111c0001eb109f
+---
+# Source: ama-metrics/templates/ama-metrics-ksm-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: ama-metrics-ksm
+  labels:
+    app.kubernetes.io/component: ama-metrics
+    app.kubernetes.io/name: ama-metrics-ksm
+    app.kubernetes.io/part-of: ama-metrics-ksm
+    app.kubernetes.io/version: 2.8.1
+    helm.sh/chart: azure-monitor-metrics-addon-0.1.0
+  annotations:
+    prometheus.io/scrape: 'true'
+spec:
+  type: "ClusterIP"
+  ports:
+  - name: "http"
+    protocol: TCP
+    port: 8080
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/name: ama-metrics-ksm
+---
+# Source: ama-metrics/templates/ama-metrics-daemonset.yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: ama-metrics-node
+  labels:
+    component: ama-metrics
+spec:
+  selector:
+    matchLabels:
+      dsName: ama-metrics-node
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 50%
+  template:
+    metadata:
+      labels:
+        dsName: ama-metrics-node
+        kubernetes.azure.com/managedby: aks
+      annotations:
+        agentVersion: "0.0.0.1"
+        schema-versions: "v1"
+    spec:
+      priorityClassName: system-node-critical
+      serviceAccountName: ama-metrics-serviceaccount
+      containers:
+        - name: prometheus-collector
+          image: "mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.0-main-05-04-2023-4450ad10"
+          imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              cpu: 200m
+              memory: 1Gi
+            requests:
+              cpu: 75m
+              memory: 150Mi
+          env:
+            - name: CLUSTER
+              value: "/subscriptions/8643025a-c059-4a48-85d0-d76f51d63a74/resourcegroups/shmalfatcanary/providers/Microsoft.ContainerService/managedClusters/shmalfatcanary"
+            - name: AKSREGION
+              value: "eastus2euap"
+            - name: MAC
+              value: "true"
+            - name: AZMON_COLLECT_ENV
+              value: "false"
+            - name: customEnvironment
+              value: "azurepubliccloud"
+            - name: OMS_TLD
+              value: "opinsights.azure.com"
+            - name: CONTROLLER_TYPE
+              value: "DaemonSet"
+            - name: NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: CONTAINER_CPU_LIMIT
+              valueFrom:
+                resourceFieldRef:
+                  containerName: prometheus-collector
+                  resource: limits.cpu
+                  divisor: 1m
+            - name: CONTAINER_MEMORY_LIMIT
+              valueFrom:
+                resourceFieldRef:
+                  containerName: prometheus-collector
+                  resource: limits.memory
+                  divisor: 1Mi
+            - name: KUBE_STATE_NAME
+              value: ama-metrics-ksm
+            - name: NODE_EXPORTER_NAME
+              value: "" # Replace this with the node exporter shipped out of box with AKS
+            - name: NODE_EXPORTER_TARGETPORT
+              value: "19100"
+            - name: KUBE_STATE_VERSION
+              value: "mcr.microsoft.com/oss/kubernetes/kube-state-metrics:v2.8.1"
+            - name: NODE_EXPORTER_VERSION
+              value: "v1.5.0" # Replace this with the version shipped by default
+            - name: AGENT_VERSION
+              value: 6.7.0-main-05-04-2023-4450ad10
+            - name: MODE
+              value: "advanced" # only supported mode is 'advanced', any other value will be the default/non-advance mode
+            - name: WINMODE
+              value: "" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
+            - name: MINIMAL_INGESTION_PROFILE
+              value: "true" # only supported value is the string "true"
+          securityContext:
+            privileged: false
+          volumeMounts:
+            - mountPath: /etc/config/settings
+              name: settings-vol-config
+              readOnly: true
+            - mountPath: /etc/config/settings/prometheus
+              name: prometheus-config-vol
+              readOnly: true
+            - name: host-log-containers
+              readOnly: true
+              mountPath: /var/log/containers
+            - name: host-log-pods
+              readOnly: true
+              mountPath: /var/log/pods
+            - mountPath: /anchors/mariner
+              name: anchors-mariner
+              readOnly: true
+            - mountPath: /anchors/ubuntu
+              name: anchors-ubuntu
+              readOnly: true
+          livenessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - /opt/microsoft/liveness/livenessprobe.sh
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+        - name: addon-token-adapter
+          command:
+            - /addon-token-adapter
+          args:
+            - --secret-namespace=default
+            - --secret-name=aad-msi-auth-token
+            - --token-server-listening-port=7777
+            - --health-server-listening-port=9999
+          image: "mcr.microsoft.com/aks/msi/addon-token-adapter:master.221118.2"
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: AZMON_COLLECT_ENV
+              value: "false"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 9999
+            initialDelaySeconds: 10
+            periodSeconds: 60
+          resources:
+            limits:
+              cpu: 500m
+              memory: 500Mi
+            requests:
+              cpu: 20m
+              memory: 30Mi
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - NET_ADMIN
+                - NET_RAW
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/os
+                    operator: In
+                    values:
+                      - linux
+                  - key: type
+                    operator: NotIn
+                    values:
+                      - virtual-kubelet
+                  - key: kubernetes.azure.com/cluster
+                    operator: Exists
+      tolerations:
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - operator: "Exists"
+          effect: NoExecute
+        - operator: "Exists"
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+      volumes:
+        - name: settings-vol-config
+          configMap:
+            name: ama-metrics-settings-configmap
+            optional: true
+        - name: prometheus-config-vol
+          configMap:
+            name: ama-metrics-prometheus-config-node
+            optional: true
+        - name: host-log-containers
+          hostPath:
+            path: /var/log/containers
+        - name: host-log-pods
+          hostPath:
+            path: /var/log/pods
+        - name: anchors-mariner
+          hostPath:
+            path: /etc/pki/ca-trust/anchors/
+            type: DirectoryOrCreate
+        - name: anchors-ubuntu
+          hostPath:
+            path: /usr/local/share/ca-certificates/
+            type: DirectoryOrCreate
+---
+# Source: ama-metrics/templates/ama-metrics-daemonset.yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: ama-metrics-win-node
+  labels:
+    component: ama-metrics
+spec:
+  selector:
+    matchLabels:
+      dsName: ama-metrics-win-node
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 50%
+  template:
+    metadata:
+      labels:
+        dsName: ama-metrics-win-node
+        kubernetes.azure.com/managedby: aks
+      annotations:
+        agentVersion: "0.0.0.1"
+        schema-versions: "v1"
+    spec:
+      priorityClassName: system-node-critical
+      serviceAccountName: ama-metrics-serviceaccount
+      containers:
+        - name: prometheus-collector
+          image: "mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.0-main-05-04-2023-4450ad10-win"
+          imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              cpu: 500m
+              memory: 1Gi
+            requests:
+              cpu: 500m
+              memory: 500Mi
+          env:
+            - name: CLUSTER
+              value: "/subscriptions/8643025a-c059-4a48-85d0-d76f51d63a74/resourcegroups/shmalfatcanary/providers/Microsoft.ContainerService/managedClusters/shmalfatcanary"
+            - name: AKSREGION
+              value: "eastus2euap"
+            - name: MAC
+              value: "true"
+            - name: AZMON_COLLECT_ENV
+              value: "false"
+            - name: customEnvironment
+              value: "azurepubliccloud"
+            - name: OMS_TLD
+              value: "opinsights.azure.com"
+            - name: CONTROLLER_TYPE
+              value: "DaemonSet"
+            - name: NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: CONTAINER_CPU_LIMIT
+              valueFrom:
+                resourceFieldRef:
+                  containerName: prometheus-collector
+                  resource: limits.cpu
+                  divisor: 1m
+            - name: CONTAINER_MEMORY_LIMIT
+              valueFrom:
+                resourceFieldRef:
+                  containerName: prometheus-collector
+                  resource: limits.memory
+                  divisor: 1Mi
+            - name: KUBE_STATE_NAME
+              value: ama-metrics-ksm
+            - name: NODE_EXPORTER_NAME
+              value: "" # Replace this with the node exporter shipped out of box with AKS
+            - name: NODE_EXPORTER_TARGETPORT
+              value: "19100"
+            - name: KUBE_STATE_VERSION
+              value: "mcr.microsoft.com/oss/kubernetes/kube-state-metrics:"
+            - name: NODE_EXPORTER_VERSION
+              value: "v1.5.0" # Replace this with the version shipped by default
+            - name: AGENT_VERSION
+              value: 6.7.0-main-05-04-2023-4450ad10
+            - name: MODE
+              value: "advanced" # only supported mode is 'advanced', any other value will be the default/non-advance mode
+            - name: WINMODE
+              value: "advanced" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
+            - name: MINIMAL_INGESTION_PROFILE
+              value: "true" # only supported value is the string "true"
+          securityContext:
+            privileged: false
+          volumeMounts:
+            - mountPath: /etc/config/settings
+              name: settings-vol-config
+              readOnly: true
+            - mountPath: /etc/config/settings/prometheus
+              name: prometheus-config-vol
+              readOnly: true
+            - name: host-log-containers
+              readOnly: true
+              mountPath: /var/log/containers
+            - name: host-log-pods
+              readOnly: true
+              mountPath: /var/log/pods
+          livenessProbe:
+            exec:
+              command:
+                - cmd
+                - /c
+                - C:\opt\microsoft\scripts\livenessprobe.cmd
+            periodSeconds: 15
+            initialDelaySeconds: 300
+            timeoutSeconds: 15
+            failureThreshold: 3
+        - name: addon-token-adapter-win
+          command:
+           - addon-token-adapter-win
+          args:
+           - --secret-namespace=kube-system
+           - --secret-name=aad-msi-auth-token
+           - --token-server-listening-port=7777
+           - --health-server-listening-port=9999
+          image: "mcr.microsoft.com/aks/hcp/addon-token-adapter:20230120winbeta"
+          imagePullPolicy: Always
+          livenessProbe:
+           httpGet:
+             path: /healthz
+             port: 9999
+           initialDelaySeconds: 10
+           periodSeconds: 60
+          resources:
+           limits:
+             memory: 500Mi
+           requests:
+             cpu: 100m
+             memory: 100Mi
+          securityContext:
+           capabilities:
+             add:
+               - NET_ADMIN
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - labelSelector:
+                matchExpressions:
+                  - key: kubernetes.io/os
+                    operator: In
+                    values:
+                    - windows
+                  - key: type
+                    operator: NotIn
+                    values:
+                      - virtual-kubelet
+      tolerations:
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - operator: "Exists"
+          effect: NoExecute
+        - operator: "Exists"
+          effect: NoSchedule
+      volumes:
+        - name: settings-vol-config
+          configMap:
+            name: ama-metrics-settings-configmap
+            optional: true
+        - name: prometheus-config-vol
+          configMap:
+            name: ama-metrics-prometheus-config-node-windows
+            optional: true
+        - name: host-log-containers
+          hostPath:
+            path: /var/log/containers
+        - name: host-log-pods
+          hostPath:
+            path: /var/log/pods
+---
+# Source: ama-metrics/templates/ama-metrics-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ama-metrics
+  labels:
+    component: ama-metrics
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  paused: false
+  selector:
+    matchLabels:
+      rsName: ama-metrics
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        rsName: ama-metrics
+        kubernetes.azure.com/managedby: aks
+      annotations:
+        agentVersion: "0.0.0.1"
+        schema-versions: "v1"
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+    spec:
+      priorityClassName: system-node-critical
+      serviceAccountName: ama-metrics-serviceaccount
+      containers:
+        - name: prometheus-collector
+          image: "mcr.microsoft.com/azuremonitor/containerinsights/ciprod/prometheus-collector/images:6.7.0-main-05-04-2023-4450ad10"
+          imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              cpu: 7
+              memory: 14Gi
+            requests:
+              cpu: 150m
+              memory: 500Mi
+          env:
+            - name: CLUSTER
+              value: "/subscriptions/8643025a-c059-4a48-85d0-d76f51d63a74/resourcegroups/shmalfatcanary/providers/Microsoft.ContainerService/managedClusters/shmalfatcanary"
+            - name: AKSREGION
+              value: "eastus2euap"
+            - name: MAC
+              value: "true"
+            - name: AZMON_COLLECT_ENV
+              value: "false"
+            - name: customEnvironment
+              value: "azurepubliccloud"
+            - name: OMS_TLD
+              value: "opinsights.azure.com"
+            - name: CONTROLLER_TYPE
+              value: "ReplicaSet"
+            - name: NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: CONTAINER_CPU_LIMIT
+              valueFrom:
+                resourceFieldRef:
+                  containerName: prometheus-collector
+                  resource: limits.cpu
+                  divisor: 1m
+            - name: CONTAINER_MEMORY_LIMIT
+              valueFrom:
+                resourceFieldRef:
+                  containerName: prometheus-collector
+                  resource: limits.memory
+                  divisor: 1Mi
+            - name: KUBE_STATE_NAME
+              value: ama-metrics-ksm
+            - name: NODE_EXPORTER_NAME
+              value: "" # Replace this with the node exporter shipped out of box with AKS
+            - name: NODE_EXPORTER_TARGETPORT
+              value: "19100"
+            - name: KUBE_STATE_VERSION
+              value: "mcr.microsoft.com/oss/kubernetes/kube-state-metrics:v2.8.1"
+            - name: NODE_EXPORTER_VERSION
+              value: "v1.5.0" # Replace this with the version shipped by default
+            - name: AGENT_VERSION
+              value: 6.7.0-main-05-04-2023-4450ad10
+            - name: MODE
+              value: "advanced" # only supported mode is 'advanced', any other value will be the default/non-advance mode
+            - name: WINMODE
+              value: "" # WINDOWS: only supported mode is 'advanced', any other value will be the default/non-advance mode
+            - name: MINIMAL_INGESTION_PROFILE
+              value: "true" # only supported value is the string "true"
+          securityContext:
+            privileged: false
+          volumeMounts:
+            - mountPath: /etc/config/settings
+              name: settings-vol-config
+              readOnly: true
+            - mountPath: /etc/config/settings/prometheus
+              name: prometheus-config-vol
+              readOnly: true
+            - name: host-log-containers
+              readOnly: true
+              mountPath: /var/log/containers
+            - name: host-log-pods
+              readOnly: true
+              mountPath: /var/log/pods
+            - mountPath: /anchors/mariner
+              name: anchors-mariner
+              readOnly: true
+            - mountPath: /anchors/ubuntu
+              name: anchors-ubuntu
+              readOnly: true
+          livenessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - /opt/microsoft/liveness/livenessprobe.sh
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+        - name: addon-token-adapter
+          command:
+            - /addon-token-adapter
+          args:
+            - --secret-namespace=kube-system
+            - --secret-name=aad-msi-auth-token
+            - --token-server-listening-port=7777
+            - --health-server-listening-port=9999
+          image: "mcr.microsoft.com/aks/msi/addon-token-adapter:master.221118.2"
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: AZMON_COLLECT_ENV
+              value: "false"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 9999
+            initialDelaySeconds: 10
+            periodSeconds: 60
+          resources:
+            limits:
+              cpu: 500m
+              memory: 500Mi
+            requests:
+              cpu: 20m
+              memory: 30Mi
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - NET_ADMIN
+                - NET_RAW
+      affinity:
+        nodeAffinity:
+          # affinity to schedule on to ephemeral os node if its available
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: kubernetes.azure.com/mode
+                operator: In
+                values:
+                - system
+          - weight: 50
+            preference:
+              matchExpressions:
+              - key: azuremonitor/metrics.replica.preferred
+                operator: In
+                values:
+                - "true"
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/os
+                    operator: In
+                    values:
+                      - linux
+                  - key: type
+                    operator: NotIn
+                    values:
+                      - virtual-kubelet
+                  - key: kubernetes.azure.com/cluster
+                    operator: Exists
+      tolerations:
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - operator: "Exists"
+          effect: NoExecute
+        - operator: "Exists"
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+      volumes:
+        - name: settings-vol-config
+          configMap:
+            name: ama-metrics-settings-configmap
+            optional: true
+        - name: prometheus-config-vol
+          configMap:
+            name: ama-metrics-prometheus-config
+            optional: true
+        - name: host-log-containers
+          hostPath:
+            path: /var/log/containers
+        - name: host-log-pods
+          hostPath:
+            path: /var/log/pods
+        - name: anchors-mariner
+          hostPath:
+            path: /etc/pki/ca-trust/anchors/
+            type: DirectoryOrCreate
+        - name: anchors-ubuntu
+          hostPath:
+            path: /usr/local/share/ca-certificates/
+            type: DirectoryOrCreate
+---
+# Source: ama-metrics/templates/ama-metrics-ksm-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ama-metrics-ksm
+  labels:
+    app.kubernetes.io/component: ama-metrics
+    app.kubernetes.io/name: ama-metrics-ksm
+    app.kubernetes.io/part-of: ama-metrics-ksm
+    app.kubernetes.io/version: 2.8.1
+    helm.sh/chart: azure-monitor-metrics-addon-0.1.0
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ama-metrics-ksm
+  replicas: 1
+  revisionHistoryLimit: 2
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: ama-metrics
+        app.kubernetes.io/name: ama-metrics-ksm
+        app.kubernetes.io/part-of: ama-metrics-ksm
+        app.kubernetes.io/version: 2.8.1
+        helm.sh/chart: azure-monitor-metrics-addon-0.1.0
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+    spec:
+      priorityClassName: system-node-critical
+      hostNetwork: false
+      serviceAccountName: ama-metrics-ksm
+      securityContext:
+        fsGroup: 65534
+        runAsGroup: 65534
+        runAsUser: 65534
+      containers:
+      - name: ama-metrics-ksm
+        env:
+          - name: AZMON_COLLECT_ENV
+            value: "false"
+        args:
+        - --port=8080
+        - --resources=certificatesigningrequests,configmaps,cronjobs,daemonsets,deployments,endpoints,horizontalpodautoscalers,ingresses,jobs,leases,limitranges,mutatingwebhookconfigurations,namespaces,networkpolicies,nodes,persistentvolumeclaims,persistentvolumes,poddisruptionbudgets,pods,replicasets,replicationcontrollers,resourcequotas,secrets,services,statefulsets,storageclasses,validatingwebhookconfigurations,volumeattachments
+        - --telemetry-port=8081
+        imagePullPolicy: IfNotPresent
+        image: "mcr.microsoft.com/oss/kubernetes/kube-state-metrics:v2.8.1"
+        resources:
+          limits:
+            cpu: 1
+            memory: 5Gi
+          requests:
+            cpu: 5m
+            memory: 50Mi
+        ports:
+        - containerPort: 8080
+          name: "http"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+      nodeSelector:
+        kubernetes.io/os: linux
+      affinity:
+        nodeAffinity:
+          # affinity to schedule on to ephemeral os node if its available
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: kubernetes.azure.com/mode
+                operator: In
+                values:
+                - system
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/os
+                    operator: In
+                    values:
+                      - linux
+                  - key: type
+                    operator: NotIn
+                    values:
+                      - virtual-kubelet
+                  - key: kubernetes.azure.com/cluster
+                    operator: Exists
+      tolerations:
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - operator: "Exists"
+          effect: NoExecute
+        - operator: "Exists"
+          effect: NoSchedule
+

@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: ama-metrics
-  namespace: kube-system
   labels:
     component: ama-metrics
 spec:
@@ -168,16 +167,16 @@ spec:
               name: ama-metrics-proxy-cert
               readOnly: true
             {{- end }}
-          livenessProbe:
-            exec:
-              command:
-                - /bin/bash
-                - -c
-                - /opt/microsoft/liveness/livenessprobe.sh
-            initialDelaySeconds: 60
-            periodSeconds: 15
-            timeoutSeconds: 5
-            failureThreshold: 3
+          # livenessProbe:
+          #   exec:
+          #     command:
+          #       - /bin/bash
+          #       - -c
+          #       - /opt/microsoft/liveness/livenessprobe.sh
+          #   initialDelaySeconds: 60
+          #   periodSeconds: 15
+          #   timeoutSeconds: 5
+          #   failureThreshold: 3
         {{- if .Values.AzureMonitorMetrics.ArcExtension }}
         - name: arc-msi-adapter
           imagePullPolicy: IfNotPresent
@@ -188,39 +187,76 @@ spec:
             value: "9999"
           {{-  .Values.Azure.Identity.MSIAdapterYaml | nindent 10 }}
         {{- else }}
-        - name: addon-token-adapter
-          command:
-            - /addon-token-adapter
-          args:
-            - --secret-namespace=kube-system
-            - --secret-name=aad-msi-auth-token
-            - --token-server-listening-port=7777
-            - --health-server-listening-port=9999
-          image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRepository }}:{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageTag }}"
+        - name: msi-adapter
+          image: mcr.microsoft.com/aks/ccp/msi-adapter:master.221118.2
           imagePullPolicy: IfNotPresent
           env:
-            - name: AZMON_COLLECT_ENV
-              value: "false"
+            - name: CLIENT_VERSION 
+              value: 17Oct2022
+            - name: SUBSCRIPTION_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: msi-adapter-config 
+                  key: SUBSCRIPTION_ID 
+            - name: CONTROL_PLANE_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace 
+            - name: RESOURCE_GROUP_NAME 
+              valueFrom:
+                configMapKeyRef:
+                  name: msi-adapter-config 
+                  key: RESOURCE_GROUP_NAME 
+            - name: MANAGED_CLUSTER_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: msi-adapter-config
+                  key: MANAGED_CLUSTER_NAME
+            # - name: LIVENESS_PROBE_PORT
+            #   value: "9999"
           livenessProbe:
             httpGet:
               path: /healthz
               port: 9999
             initialDelaySeconds: 10
             periodSeconds: 60
-          resources:
-            limits:
-              cpu: 500m
-              memory: 500Mi
-            requests:
-              cpu: 20m
-              memory: 30Mi
           securityContext:
             capabilities:
-              drop:
-                - ALL
               add:
                 - NET_ADMIN
-                - NET_RAW
+        # - name: addon-token-adapter
+        #   command:
+        #     - /addon-token-adapter
+        #   args:
+        #     - --secret-namespace=646f7efd9a80fd000126481b
+        #     - --secret-name=aad-msi-auth-token
+        #     - --token-server-listening-port=7777
+        #     - --health-server-listening-port=9999
+        #   image: "mcr.microsoft.com{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageRepository }}:{{ .Values.AzureMonitorMetrics.AddonTokenAdapter.ImageTag }}"
+        #   imagePullPolicy: IfNotPresent
+        #   env:
+        #     - name: AZMON_COLLECT_ENV
+        #       value: "false"
+        #   livenessProbe:
+        #     httpGet:
+        #       path: /healthz
+        #       port: 9999
+        #     initialDelaySeconds: 10
+        #     periodSeconds: 60
+        #   resources:
+        #     limits:
+        #       cpu: 500m
+        #       memory: 500Mi
+        #     requests:
+        #       cpu: 20m
+        #       memory: 30Mi
+        #   securityContext:
+        #     capabilities:
+        #       drop:
+        #         - ALL
+        #       add:
+        #         - NET_ADMIN
+        #         - NET_RAW
         {{- end }}
       affinity:
         nodeAffinity:

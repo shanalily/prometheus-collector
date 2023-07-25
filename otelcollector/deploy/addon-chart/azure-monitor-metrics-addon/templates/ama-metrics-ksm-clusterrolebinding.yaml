@@ -15,4 +15,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: ama-metrics-ksm
-  namespace: kube-system
+  namespace: 6463a3a122111c0001eb109f
